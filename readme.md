@@ -4,11 +4,11 @@
 
 This project demonstrates deploying a production-style WordPress application using:
 
-- EC2 for Application Layer
-- RDS (MySQL Engine) for Database Layer
-- Apache + PHP on Amazon Linux 2023
+- EC2 for Application Layer  
+- RDS (MySQL Engine) for Database Layer  
+- Apache + PHP on Amazon Linux 2023  
 
-This architecture follows real-world cloud deployment standards with separation of concerns.
+This architecture follows real-world cloud deployment standards with proper separation between application and database layers.
 
 ---
 
@@ -16,19 +16,20 @@ This architecture follows real-world cloud deployment standards with separation 
 
 User → EC2 (Apache + PHP + WordPress) → RDS (MySQL)
 
-Services Used:
+### Services Used
 
-- Amazon EC2
-- Amazon RDS (MySQL)
-- WordPress
-- MySQL
-- AWS Cloud
+- Amazon EC2  
+- Amazon RDS (MySQL)  
+- WordPress  
+- MySQL  
+- AWS Cloud  
 
 ---
 
 ## 🛠 Implementation Steps
 
 ### 1️⃣ Connect to EC2
+
 ```bash
 sudo -s
 dnf update -y
@@ -51,7 +52,7 @@ mysql -h <RDS-EndPoint> -P 3306 -u admin -p
 
 ---
 
-### 3️⃣ Create Database & User
+### 3️⃣ Create Database & Application User
 
 ```sql
 create database wordpressdb;
@@ -63,7 +64,7 @@ exit;
 
 ---
 
-### 4️⃣ Install Apache
+### 4️⃣ Install Apache Web Server
 
 ```bash
 dnf install httpd -y
@@ -73,7 +74,7 @@ systemctl enable httpd
 
 ---
 
-### 5️⃣ Install PHP & Dependencies
+### 5️⃣ Install PHP & Required Dependencies
 
 ```bash
 dnf install php php-mysqlnd php-fpm wget -y
@@ -92,7 +93,9 @@ cp wp-config-sample.php wp-config.php
 vi wp-config.php
 ```
 
-Update DB details:
+#### 🔹 Update Database Configuration
+
+Inside `wp-config.php`, update the database details:
 
 ```php
 define('DB_NAME', 'wordpressdb');
@@ -103,7 +106,31 @@ define('DB_HOST', '<RDS-EndPoint>');
 
 ---
 
-### 7️⃣ Move Files to Web Root
+#### 🔐 Generate Authentication Unique Keys (Important Step)
+
+WordPress requires secure authentication keys for login sessions and cookies.
+
+1. Open the following URL in your browser:
+
+```
+https://api.wordpress.org/secret-key/1.1/salt/
+```
+
+2. Copy all the generated `define()` lines  
+3. Inside `wp-config.php`, locate the Authentication Keys section  
+4. Delete the existing authentication `define()` lines  
+5. Paste the newly generated lines  
+6. Save and exit the file  
+
+Restart Apache:
+
+```bash
+systemctl restart httpd
+```
+
+---
+
+### 7️⃣ Move WordPress Files to Web Root
 
 ```bash
 cd ..
@@ -113,51 +140,80 @@ systemctl restart httpd
 
 ---
 
-### 8️⃣ Access Application
+### 8️⃣ Access the Application
+
+Open your browser and enter:
 
 ```
 http://<EC2-Public-IP>:80
 ```
 
-Complete WordPress setup via browser.
+Complete the WordPress installation wizard.
 
 ---
 
-## 🔐 Why I Used `admin` to Connect
+## 🔐 Why I Used `admin` to Connect to RDS
 
-While launching RDS, I configured a master user named `admin`.
+While creating the RDS MySQL instance, I configured a master username called `admin`.
 
-Since Amazon RDS is a managed database service, SSH access is not allowed.  
-So I connected remotely from EC2 using:
+Since Amazon RDS is a managed database service:
+
+- SSH access to the database server is not allowed  
+- Direct OS-level access is restricted  
+
+Therefore, I connected remotely from EC2 using:
 
 ```bash
 mysql -h <RDS-EndPoint> -P 3306 -u admin -p
 ```
 
-The master user was used only for initial setup.  
-For application security, I created a dedicated user (`wpuser`) following the least privilege principle.
+The `admin` user was used only for initial database setup (creating database and user).
+
+For security best practices, I created a dedicated application user (`wpuser`) and configured WordPress to use that user instead of the master account.
+
+This follows the **Principle of Least Privilege**, which is recommended in production environments.
 
 ---
 
 ## 🧠 Key Learnings
 
-- EC2 + RDS integration
-- Security group configuration (80 & 3306)
-- Database privilege management
-- Linux service management (systemctl)
-- Production-style cloud architecture
+- EC2 and RDS integration  
+- Security group configuration (Port 80 & 3306)  
+- Remote database connectivity  
+- Database user and privilege management  
+- Apache and PHP setup on Amazon Linux 2023  
+- Production-style cloud architecture design  
 
 ---
 
 ## 📷 Screenshots
 
-Screenshots are available inside the `/screenshots` directory.
+Screenshots for this project are available inside the `/screenshots` directory.
+
+Example screenshots may include:
+
+- EC2 Instance Configuration  
+- RDS Instance Setup  
+- Security Group Rules  
+- Database Creation  
+- WordPress Installation Page  
+- Final Application Output  
 
 ---
 
 ## 🚀 Future Improvements
 
-- Make RDS private
-- Add Nginx instead of Apache
-- Add Load Balancer
-- Automate using Terraform
+- Configure RDS as Private (inside private subnet)  
+- Add Application Load Balancer  
+- Replace Apache with Nginx  
+- Add HTTPS using ACM  
+- Automate entire setup using Terraform  
+- Implement CI/CD pipeline  
+
+---
+
+## 📌 Conclusion
+
+This project demonstrates a real-world AWS architecture where the application layer (EC2) and database layer (RDS) are separated for better scalability, security, and maintainability.
+
+It reflects production deployment standards followed in modern cloud environments.
