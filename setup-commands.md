@@ -1,4 +1,5 @@
 # WordPress Deployment Commands
+# check with readme.md
 
 ## Switch to root
 ```bash
